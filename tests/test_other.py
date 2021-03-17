@@ -6703,9 +6703,20 @@ int main() {
     ret = self.expect_fail([EMCC, test_file('hello_world.c'), '-s', 'MAXIMUM_MEMORY=34603009']) # 33MB + 1 byte
     self.assertContained('MAXIMUM_MEMORY must be a multiple of WebAssembly page size (64KiB)', ret)
 
-  def test_invalid_output_dir(self):
+  def test_dasho_invalid_dir(self):
     ret = self.expect_fail([EMCC, test_file('hello_world.c'), '-o', os.path.join('NONEXISTING_DIRECTORY', 'out.js')])
     self.assertContained('specified output file (NONEXISTING_DIRECTORY%sout.js) is in a directory that does not exist' % os.path.sep, ret)
+
+  def test_dasho_is_dir(self):
+    ret = self.expect_fail([EMCC, test_file('hello_world.c'), '-o', '.'])
+    self.assertContained('emcc: error: cannot write output file `.`: Is a directory', ret)
+
+    ret = self.expect_fail([EMCC, test_file('hello_world.c'), '-o', '.', '--oformat=wasm'])
+    self.assertContained('wasm-ld: error: cannot open output file .: Is a directory', ret)
+
+    ret = self.expect_fail([EMCC, test_file('hello_world.c'), '-o', '.', '--oformat=html'])
+    self.assertContained('emcc: error: cannot write output file:', ret)
+    self.assertContained("Is a directory: '.'", ret)
 
   def test_binaryen_ctors(self):
     # ctor order must be identical to js builds, deterministically
@@ -8436,6 +8447,7 @@ int main () {
                                '-s', 'GL_SUPPORT_EXPLICIT_SWAP_CONTROL=0',
                                '-s', 'GL_POOL_TEMP_BUFFERS=0',
                                '-s', 'MIN_CHROME_VERSION=58',
+                               '-s', 'GL_WORKAROUND_SAFARI_GETCONTEXT_BUG=0',
                                '-s', 'NO_FILESYSTEM',
                                '--output_eol', 'linux',
                                '-Oz',
