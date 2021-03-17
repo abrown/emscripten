@@ -379,6 +379,8 @@ def remove_trailing_zeros(memfile):
 
 def finalize_wasm(infile, outfile, memfile, DEBUG):
   building.save_intermediate(infile, 'base.wasm')
+  # tell binaryen to look at the features section, and if there isn't one, to use MVP
+  # (which matches what llvm+lld has given us)
   args = ['--detect-features', '--minimize-wasm-changes']
 
   # if we don't need to modify the wasm, don't tell finalize to emit a wasm file
@@ -393,10 +395,6 @@ def finalize_wasm(infile, outfile, memfile, DEBUG):
     building.save_intermediate(infile + '.map', 'base_wasm.map')
     args += ['--output-source-map-url=' + shared.Settings.SOURCE_MAP_BASE + os.path.basename(outfile) + '.map']
     modify_wasm = True
-  # tell binaryen to look at the features section, and if there isn't one, to use MVP
-  # (which matches what llvm+lld has given us)
-  if shared.Settings.DEBUG_LEVEL >= 2 or shared.Settings.ASYNCIFY_ADD or shared.Settings.ASYNCIFY_ADVISE or shared.Settings.ASYNCIFY_ONLY or shared.Settings.ASYNCIFY_REMOVE or shared.Settings.EMIT_SYMBOL_MAP or shared.Settings.PROFILING_FUNCS:
-    args.append('-g')
   if shared.Settings.WASM_BIGINT:
     args.append('--bigint')
   if shared.Settings.DYNCALLS:
@@ -429,9 +427,19 @@ def finalize_wasm(infile, outfile, memfile, DEBUG):
     modify_wasm = True
   if shared.Settings.STANDALONE_WASM:
     args.append('--standalone-wasm')
-
   if shared.Settings.DEBUG_LEVEL >= 3:
     args.append('--dwarf')
+  # If we are going to write out the wasm then we may need to parse debug info,
+  # depending on other flags.
+  if modify_wasm:
+    if shared.Settings.DEBUG_LEVEL >= 2 or \
+       shared.Settings.ASYNCIFY_ADD or \
+       shared.Settings.ASYNCIFY_ADVISE or \
+       shared.Settings.ASYNCIFY_ONLY or \
+       shared.Settings.ASYNCIFY_REMOVE or \
+       shared.Settings.EMIT_SYMBOL_MAP or \
+       shared.Settings.PROFILING_FUNCS:
+      args.append('-g')
   stdout = building.run_binaryen_command('wasm-emscripten-finalize',
                                          infile=infile,
                                          outfile=outfile if modify_wasm else None,
