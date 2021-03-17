@@ -430,7 +430,9 @@ def finalize_wasm(infile, outfile, memfile, DEBUG):
   if shared.Settings.DEBUG_LEVEL >= 3:
     args.append('--dwarf')
   # If we are going to write out the wasm then we may need to parse debug info,
-  # depending on other flags.
+  # depending on other flags. If we do not write out the wasm then we know we
+  # will not need debug info for anything, as our metadata does not depend on
+  # it.
   if modify_wasm:
     if shared.Settings.DEBUG_LEVEL >= 2 or \
        shared.Settings.ASYNCIFY_ADD or \
